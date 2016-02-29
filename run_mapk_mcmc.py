@@ -29,10 +29,14 @@ class MapkExperiment(object):
         self.ERK = numpy.array(self.ERK)
      
         sigma_min = 0.05
-        self.ERK_std = numpy.array([d if d > sigma_min else sigma_min for d in self.ERK_std])
-        self.ERKpY_std = numpy.array([d if d > sigma_min else sigma_min for d in self.ERKpY_std])
-        self.ERKpT_std = numpy.array([d if d > sigma_min else sigma_min for d in self.ERKpT_std])
-        self.ERKpTpY_std = numpy.array([d if d > sigma_min else sigma_min for d in self.ERKpTpY_std])
+        self.ERK_std = numpy.array([d if d > sigma_min else 
+                                    sigma_min for d in self.ERK_std])
+        self.ERKpY_std = numpy.array([d if d > sigma_min else 
+                                      sigma_min for d in self.ERKpY_std])
+        self.ERKpT_std = numpy.array([d if d > sigma_min else 
+                                      sigma_min for d in self.ERKpT_std])
+        self.ERKpTpY_std = numpy.array([d if d > sigma_min else 
+                                        sigma_min for d in self.ERKpTpY_std])
 
 def getfloat(s):
     if s == '':
@@ -60,15 +64,19 @@ def read_data():
             csv_reader = csv.DictReader(lines_exp)
             exp = MapkExperiment()
             for line in csv_reader:
-                erk_data = numpy.array([getfloat(line['A%d' % (r + 1)]) for r in range(nrep)])
+                erk_data = numpy.array([getfloat(line['A%d' % (r + 1)]) for 
+                                        r in range(nrep)])
                 erk_mean = numpy.nanmean(erk_data)
                 # Assumption: all values will be nan so it's enough to test ERK
                 if not numpy.isnan(erk_mean):
                     exp.ERK.append(erk_mean)
                     exp.ERK_std.append(numpy.nanstd(erk_data))
-                    erkpy_data = numpy.array([getfloat(line['B%d' % (r + 1)]) for r in range(nrep)])
-                    erkpt_data = numpy.array([getfloat(line['C%d' % (r + 1)]) for r in range(nrep)])
-                    erkptpy_data = numpy.array([getfloat(line['D%d' % (r + 1)]) for r in range(nrep)])
+                    erkpy_data = numpy.array([getfloat(line['B%d' % (r + 1)]) 
+                                              for r in range(nrep)])
+                    erkpt_data = numpy.array([getfloat(line['C%d' % (r + 1)]) 
+                                              for r in range(nrep)])
+                    erkptpy_data = numpy.array([getfloat(line['D%d' % (r + 1)]) 
+                                                for r in range(nrep)])
                     erkptpy_data -= erkpt_data
                     erkpt_data -= erkpy_data
                     erkpy_data -= erk_data
@@ -135,9 +143,12 @@ def plot_fit(model, data, pd=None):
         ax.set_xlim([0, 19800])
         ax.set_ylim([0, 1])
 
-        ax.errorbar(exp.ts, exp.ERKpY, yerr=exp.ERKpY_std, fmt='bo', label='ERKpY')
-        ax.errorbar(exp.ts, exp.ERKpT, yerr=exp.ERKpT_std, fmt='go', label='ERKpT')
-        ax.errorbar(exp.ts, exp.ERKpTpY, yerr=exp.ERKpTpY_std, fmt='ro', label='ERKpTpY')
+        ax.errorbar(exp.ts, exp.ERKpY, yerr=exp.ERKpY_std, 
+                    fmt='bo', label='ERKpY')
+        ax.errorbar(exp.ts, exp.ERKpT, yerr=exp.ERKpT_std, 
+                    fmt='go', label='ERKpT')
+        ax.errorbar(exp.ts, exp.ERKpTpY, yerr=exp.ERKpTpY_std, 
+                    fmt='ro', label='ERKpTpY')
 
         ax.plot(exp.ts, erkpy, 'b')
         ax.plot(exp.ts, erkpt, 'g')
@@ -231,7 +242,8 @@ def build_erk_activate_mkp():
 
 def run_one_model(model, data, ns):
     # Vector of nominal parameters
-    p = numpy.log10(numpy.array([pp.value for pp in model.parameters if pp.name[0]=='k']))
+    p = numpy.log10(numpy.array([pp.value for pp in model.parameters 
+                                 if pp.name[0]=='k']))
     print posterior(p, model, data)
     
     # Number of temperatures, dimensions and walkers
