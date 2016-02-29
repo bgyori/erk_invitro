@@ -67,22 +67,30 @@ def mkp_dephos_erk_2_step():
     alias_model_components()
     
     Rule('MKP_bind_ERK_uu', MKP(b=None) + ERK(b=None, T='u', Y='u') <>\
-                            MKP(b=1) % ERK(b=1, T='u', Y='u'), kf_mkp, kr_mkp)
+                            MKP(b=1) % ERK(b=1, T='u', Y='u'), kf_mkp, 
+                            kr_mkp)
     Rule('MKP_bind_ERK_pT', MKP(b=None) + ERK(b=None, T='p', Y='u') <>\
-                            MKP(b=1) % ERK(b=1, T='p', Y='u'), kf_mkp_p, kr_mkp_p)
+                            MKP(b=1) % ERK(b=1, T='p', Y='u'), kf_mkp_p,
+                            kr_mkp_p)
     Rule('MKP_bind_ERK_pY', MKP(b=None) + ERK(b=None, T='u', Y='p') <>\
-                            MKP(b=1) % ERK(b=1, T='u', Y='p'), kf_mkp_p, kr_mkp_p)
+                            MKP(b=1) % ERK(b=1, T='u', Y='p'), kf_mkp_p,
+                            kr_mkp_p)
     Rule('MKP_bind_ERK_pp', MKP(b=None) + ERK(b=None, T='p', Y='p') <>\
-                            MKP(b=1) % ERK(b=1, T='p', Y='p'), kf_mkp_pp, kr_mkp_pp)
+                            MKP(b=1) % ERK(b=1, T='p', Y='p'), 
+                            kf_mkp_pp, kr_mkp_pp)
     
     Rule('MKP_dephos_ERK_ppT', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
-                                MKP(b=None) + ERK(b=None, T='u', Y='p'), kc_mkp_p)
+                               MKP(b=None) + ERK(b=None, T='u', Y='p'),
+                               kc_mkp_p)
     Rule('MKP_dephos_ERK_ppY', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
-                                MKP(b=None) + ERK(b=None, T='p', Y='u'), kc_mkp_p)
+                               MKP(b=None) + ERK(b=None, T='p', Y='u'),
+                               kc_mkp_p)
     Rule('MKP_dephos_ERK_pT', MKP(b=1) % ERK(b=1, T='p', Y='u') >>\
-                                MKP(b=None) + ERK(b=None, T='u', Y='u'), kc_mkp)
+                              MKP(b=None) + ERK(b=None, T='u', Y='u'),
+                              kc_mkp)
     Rule('MKP_dephos_ERK_pY', MKP(b=1) % ERK(b=1, T='u', Y='p') >>\
-                                MKP(b=None) + ERK(b=None, T='u', Y='u'), kc_mkp)
+                              MKP(b=None) + ERK(b=None, T='u', Y='u'),
+                              kc_mkp)
 
 def erk_dimerize_any():
     Parameter('kf_erk', 10)
@@ -97,6 +105,23 @@ def erk_dimerize_uT():
     alias_model_components()
     Rule('ERK_bind_ERK', ERK(b=None, T='u') + ERK(b=None, T='u') <>\
                         ERK(b=1, T='u') % ERK(b=1, T='u'), kf_erk, kr_erk)
+
+def erk_dimerize_phos():
+    Parameter('kf_erk', 10)
+    Parameter('kr_erk', 1e-5)
+    alias_model_components()
+    # These 3 rules cover all the combinations for any phosphorylated form
+    # of ERK to dimerize. Only unphosphorylated for should not be able to
+    # dimerize.
+    Rule('ERK_bind_ERK', ERK(b=None, Y='p') + ERK(b=None, Y='p') 
+                         <> ERK(b=1, Y='p') % ERK(b=1, Y='p'), 
+                         kf_erk, kr_erk)
+    Rule('ERK_bind_ERK', ERK(b=None, T='p', Y='u') + ERK(b=None, T='p', Y='u') 
+                         <> ERK(b=1, T='p', Y='u') % ERK(b=1, T='p', Y='u'), 
+                         kf_erk, kr_erk)
+    Rule('ERK_bind_ERK', ERK(b=None, Y='p') + ERK(b=None, T='p', Y='u') 
+                         <> ERK(b=1, Y='p') % ERK(b=1, T='p', Y='u'), 
+                         kf_erk, kr_erk)
 
 def erk_autophos():
     # * How does ERK autophosphorylate?
@@ -150,13 +175,15 @@ def mek_dephos_erk():
     Parameter('kc_mekdp', 1e-5)
     alias_model_components()
     Rule('MEK_dephos_ERKpTpY', MEK(b=1) % ERK(b=1, T='p', Y='p') >>\
-                                MEK(b=None) + ERK(b=None, T='u', Y='p'), kc_mekdp)
+                               MEK(b=None) + ERK(b=None, T='u', Y='p'), 
+                               kc_mekdp)
 
 def erk_autodephos():
     Parameter('kc_erkdp', 1e-5)
     alias_model_components()
     Rule('ERK_dephos_ERKpTpY', ERK(T='p', Y='p') % ERK(T='p', Y='p') >>\
-                                ERK(T='p', Y='p') % ERK(T='u', Y='p'), kc_erkdp)
+                               ERK(T='p', Y='p') % ERK(T='u', Y='p'),
+                               kc_erkdp)
 
 def mapk_initials():
     Parameter('ERK_0', 1e3)
