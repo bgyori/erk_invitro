@@ -201,8 +201,8 @@ def posterior(p, model, data):
 def build_markevich_2step():
     Model()
     mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step()
-    mapk_model.mkp_dephos_erk_2_step()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
     mapk_model.mapk_initials()
     mapk_model.mapk_observables()
     return model
@@ -210,8 +210,8 @@ def build_markevich_2step():
 def build_erk_autophos_any():
     Model()
     mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step()
-    mapk_model.mkp_dephos_erk_2_step()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
     mapk_model.erk_dimerize_any()
     mapk_model.erk_autophos()
     mapk_model.mapk_initials()
@@ -221,8 +221,8 @@ def build_erk_autophos_any():
 def build_erk_autophos_uT():
     Model()
     mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step()
-    mapk_model.mkp_dephos_erk_2_step()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
     mapk_model.erk_dimerize_uT()
     mapk_model.erk_autophos()
     mapk_model.mapk_initials()
@@ -232,8 +232,8 @@ def build_erk_autophos_uT():
 def build_erk_autophos_phos():
     Model()
     mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step()
-    mapk_model.mkp_dephos_erk_2_step()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
     mapk_model.erk_dimerize_uT()
     mapk_model.erk_autophos()
     mapk_model.mapk_initials()
@@ -243,8 +243,8 @@ def build_erk_autophos_phos():
 def build_erk_activate_mkp():
     Model()
     mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step()
-    mapk_model.mkp_dephos_erk_2_step()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
     mapk_model.erk_dimerize_uT()
     mapk_model.erk_autophos()
     mapk_model.erk_activate_mkp()
