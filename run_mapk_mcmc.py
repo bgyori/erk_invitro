@@ -1,3 +1,4 @@
+import sys
 import csv
 import emcee
 import numpy
@@ -228,6 +229,17 @@ def build_erk_autophos_uT():
     mapk_model.mapk_observables()
     return model
 
+def build_erk_autophos_phos():
+    Model()
+    mapk_model.mapk_monomers()
+    mapk_model.mek_phos_erk_2_step()
+    mapk_model.mkp_dephos_erk_2_step()
+    mapk_model.erk_dimerize_uT()
+    mapk_model.erk_autophos()
+    mapk_model.mapk_initials()
+    mapk_model.mapk_observables()
+    return model
+
 def build_erk_activate_mkp():
     Model()
     mapk_model.mapk_monomers()
@@ -270,14 +282,21 @@ def run_one_model(model, data, ns):
     return sampler
 
 if __name__ == '__main__':
+    ns = 1000
+    if len(sys.argv) > 1:
+        model_number = int(sys.argv[1])
+        if len(sys.argv) > 2:
+            ns = int(sys.argv[2])
     # Read experimental data
     data = read_data()
     # Build model of interest
-    model1 = build_markevich_2step()
-    model2 = build_erk_autophos_any()
-    model3 = build_erk_autophos_uT()
-    model4 = build_erk_activate_mkp()
+    if model_number == 1:
+        model = build_markevich_2step()
+    elif model_number == 2:
+        model = build_erk_autophos_phos()
+    elif model_number == 3:
+        model = build_erk_autophos_uT()
+    elif model_number == 4:
+        model = build_erk_activate_mkp()
 
-    ns = 1000
-    sampler = run_one_model(model1, data, ns)
-
+    sampler = run_one_model(model, data, ns)
