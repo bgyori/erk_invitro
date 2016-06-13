@@ -173,21 +173,21 @@ def mkp_dephos_erk_2_step_specific():
                               kc_mkp)
 
 def erk_dimerize_any():
-    Parameter('kf_erk', 10)
+    Parameter('kf_erk', 1)
     Parameter('kr_erk', 1e-5)
     alias_model_components()
     Rule('ERK_bind_ERK', ERK(b=None) + ERK(b=None) <>\
                         ERK(b=1) % ERK(b=1), kf_erk, kr_erk)
 
 def erk_dimerize_uT():
-    Parameter('kf_erk', 10)
+    Parameter('kf_erk', 1)
     Parameter('kr_erk', 1e-5)
     alias_model_components()
     Rule('ERK_bind_ERK', ERK(b=None, T='u') + ERK(b=None, T='u') <>\
                         ERK(b=1, T='u') % ERK(b=1, T='u'), kf_erk, kr_erk)
 
 def erk_dimerize_phos():
-    Parameter('kf_erk', 10)
+    Parameter('kf_erk', 1)
     Parameter('kr_erk', 1e-5)
     alias_model_components()
     # These 3 rules cover all the combinations for any phosphorylated form
@@ -252,14 +252,14 @@ def erk_activate_mkp():
     Observable('MKP_act_', MKP_act())
 
 def mek_dephos_erk():
-    Parameter('kc_mekdp', 1e-5)
+    Parameter('kc_mekdp', 1e-2)
     alias_model_components()
     Rule('MEK_dephos_ERKpTpY', MEK(b=1) % ERK(b=1, T='p', Y='p') >>\
                                MEK(b=None) + ERK(b=None, T='u', Y='p'), 
                                kc_mekdp)
 
 def erk_autodephos():
-    Parameter('kc_erkdp', 1e-5)
+    Parameter('kc_erkdp', 1e-2)
     alias_model_components()
     Rule('ERK_dephos_ERKpTpY', ERK(T='p', Y='p') % ERK(T='p', Y='p') >>\
                                ERK(T='p', Y='p') % ERK(T='u', Y='p'),

@@ -10,7 +10,7 @@ from pysb import *
 
 import mapk_model
 
-folder_path = '/home/bmg16/Dropbox/postdoc/erk/'
+folder_path = '/home/ap397/erk_invitro'
 use_mpi = False
 
 class MapkExperiment(object):
@@ -62,7 +62,7 @@ def read_data():
 
     data = []
 
-    with open(folder_path + 'Data/combined_data_9.csv', 'r') as fh:
+    with open(folder_path + '/combined_data_9.csv', 'r') as fh:
         lines = fh.readlines()
         blocksize = 1 + nt
         for i in range(nexp):
@@ -111,7 +111,7 @@ def sim_experiment(model, exp, pd=None):
     pd['MEK_0'] = exp.MEKtot
     pd['MKP_0'] = exp.MKPtot
 
-    solver = Solver(model, exp.ts)
+    solver = Solver(model, exp.ts, use_analytic_jacobian=True)
     solver.run(pd)
     return solver.yobs
 
@@ -281,9 +281,9 @@ def run_one_model(model, model_number, data, ns, pool=None):
     p0 = numpy.ones((ntemps, nwalkers, ndim))
     for i in range(ntemps):
         for j in range(nwalkers):
-            p0[i, j, :] = p + 1.0*numpy.random.rand(ndim)
+            p0[i, j, :] = p + 1.0*(numpy.random.rand(ndim)-0.5)
     # Run sampler
-    fname = folder_path + 'src/chain_%d.dat' % model_number
+    fname = folder_path + 'chain_%d.dat' % model_number
     step = 0
     for result in sampler.sample(p0, iterations=ns, storechain=True):
         print '---'
@@ -344,5 +344,5 @@ if __name__ == '__main__':
     sampler.logl = None
     sampler.logp = None
     print 'Saving results...'
-    with open(folder_path + 'src/model_%d.pkl' % model_number, 'wb') as fh:
+    with open(folder_path + 'model_%d.pkl' % model_number, 'wb') as fh:
         pickle.dump(sampler, fh)
