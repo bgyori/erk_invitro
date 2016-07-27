@@ -9,47 +9,10 @@ def mapk_monomers():
     Monomer('MKP', ['b'])
     alias_model_components()
 
-# Questions
-# * Is the phosphorylation and dephosphorylation distributive or processive
-# ** If distributive then is the same binding site used for both T and Y phosphorylation?
-# * Do MEK and MKP compete for the same binding site on ERK?
-
-def mek_phos_erk_2_step_generic():
-    """Based on Table S4 of Markevich et al. Assuming distributive random 
-    kinase mechanism.
-    
-    First and second order rate constants are in s^{-1} and nM^{-1}s^{-1}
-    respectively.
-    """
-    Parameter('kf_mek', 4e-2)     # = k_1 + k_5
-    Parameter('kr_mek', 1)        # = k_{-1} = k_{-3}
-    Parameter('kf_mek_p', 3.2e-2) # = k_3 = k_7
-    Parameter('kr_mek_p', 1)      # = k_{-5} = k_{-7}
-    Parameter('kc_mek', 1e-2)     # = k_2 = k_6
-    Parameter('kc_mek_p', 15)     # = k_4 = k_8
-    alias_model_components()
-
-    Rule('MEK_bind_ERK_uu', MEK(b=None) + ERK(b=None, T='u', Y='u') <>\
-                            MEK(b=1) % ERK(b=1, T='u', Y='u'), kf_mek, kr_mek)
-    Rule('MEK_bind_ERK_pT', MEK(b=None) + ERK(b=None, T='p', Y='u') <>\
-                            MEK(b=1) % ERK(b=1, T='p', Y='u'), kf_mek_p, kr_mek_p)
-    Rule('MEK_bind_ERK_pY', MEK(b=None) + ERK(b=None, T='u', Y='p') <>\
-                            MEK(b=1) % ERK(b=1, T='u', Y='p'), kf_mek_p, kr_mek_p)
-    Rule('MEK_bind_ERK_pp', MEK(b=None) + ERK(b=None, T='p', Y='p') <>\
-                            MEK(b=1) % ERK(b=1, T='p', Y='p'), kf_mek_p, kr_mek_p)
-    Rule('MEK_phos_ERK_T', MEK(b=1) % ERK(b=1, T='u', Y='u') >>\
-                            MEK(b=None) + ERK(b=None, T='p', Y='u'), kc_mek)
-    Rule('MEK_phos_ERK_Y', MEK(b=1) % ERK(b=1, T='u', Y='u') >>\
-                            MEK(b=None) + ERK(b=None, T='u', Y='p'), kc_mek)
-    Rule('MEK_phos_ERK_TpY', MEK(b=1) % ERK(b=1, T='u', Y='p') >>\
-                            MEK(b=None) + ERK(b=None, T='p', Y='p'), kc_mek_p)
-    Rule('MEK_phos_ERK_pTY', MEK(b=1) % ERK(b=1, T='p', Y='u') >>\
-                            MEK(b=None) + ERK(b=None, T='p', Y='p'), kc_mek_p)
-
-def mek_phos_erk_2_step_specific():
+def mek_phos_erk_random():
     """The parameters are based on Table S2 of Markevich et al. 
     But we assume distributive random kinase mechanism.
-    
+
     First and second order rate constants are in s^{-1} and nM^{-1}s^{-1}
     respectively.
     """
@@ -81,56 +44,36 @@ def mek_phos_erk_2_step_specific():
     Rule('MEK_phos_ERK_pTY', MEK(b=1) % ERK(b=1, T='p', Y='u') >>\
                             MEK(b=None) + ERK(b=None, T='p', Y='p'), kc_mek_ty)
 
-def mkp_dephos_erk_2_step_generic():
-    """Based on and simplified from Table S4 of Markevich et al. 
-    Assuming distributive random phosphatase mechanism. It is simplified to 
-    2-step mechanisms from the 3-step ones in the original table.
-    
+def mek_phos_erk_seq():
+    """The parameters are based on Table S2 of Markevich et al. 
+    But we assume distributive sequential inase mechanism.
+
     First and second order rate constants are in s^{-1} and nM^{-1}s^{-1}
     respectively.
     """
-    Parameter('kf_mkp', 2.9e-3)    # = h_{-6} + h_{-9}
-    Parameter('kf_mkp_p', 2e-2)    # = h_{-3} + h_4 = h_7 + h_{-12}
-    Parameter('kf_mkp_pp', 4.5e-2) # = h_1 = h_{10}
-    Parameter('kr_mkp', 1.4e-1)    # = h_9 which is also used 
-                                   #    in the reaction for the original h_6
-    Parameter('kr_mkp_p', 1)       # = h_{3} = h_{-4} = h_{-7} = h_{12}
-    Parameter('kr_mkp_pp', 1)      # = h_{-1} = h_{-10}
-    Parameter('kc_mkp', 5e-1)      # = h_5 which is also used
-                                   #    in the reaction for the original h_8
-    Parameter('kc_mkp_p', 9.2e-2)  # = h_2 = h_{11}
+    Parameter('kf_mek', 5.5e-3)   # = k_1 + k_5
+    Parameter('kf_mek_y', 2.5e-2) # = k_3
+    Parameter('kr_mek', 1)        # = k_{-1} = k_{-3}
+    Parameter('kr_mek_p', 1)      # = k_{-5} = k_{-7}
+    Parameter('kc_mek_y', 1.08)   # = k_2
+    Parameter('kc_mek_yt', 7e-3)   # = k_4
     alias_model_components()
-    
-    Rule('MKP_bind_ERK_uu', MKP(b=None) + ERK(b=None, T='u', Y='u') <>\
-                            MKP(b=1) % ERK(b=1, T='u', Y='u'), kf_mkp, 
-                            kr_mkp)
-    Rule('MKP_bind_ERK_pT', MKP(b=None) + ERK(b=None, T='p', Y='u') <>\
-                            MKP(b=1) % ERK(b=1, T='p', Y='u'), kf_mkp_p,
-                            kr_mkp_p)
-    Rule('MKP_bind_ERK_pY', MKP(b=None) + ERK(b=None, T='u', Y='p') <>\
-                            MKP(b=1) % ERK(b=1, T='u', Y='p'), kf_mkp_p,
-                            kr_mkp_p)
-    Rule('MKP_bind_ERK_pp', MKP(b=None) + ERK(b=None, T='p', Y='p') <>\
-                            MKP(b=1) % ERK(b=1, T='p', Y='p'), 
-                            kf_mkp_pp, kr_mkp_pp)
-    
-    Rule('MKP_dephos_ERK_ppT', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
-                               MKP(b=None) + ERK(b=None, T='u', Y='p'),
-                               kc_mkp_p)
-    Rule('MKP_dephos_ERK_ppY', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
-                               MKP(b=None) + ERK(b=None, T='p', Y='u'),
-                               kc_mkp_p)
-    Rule('MKP_dephos_ERK_pT', MKP(b=1) % ERK(b=1, T='p', Y='u') >>\
-                              MKP(b=None) + ERK(b=None, T='u', Y='u'),
-                              kc_mkp)
-    Rule('MKP_dephos_ERK_pY', MKP(b=1) % ERK(b=1, T='u', Y='p') >>\
-                              MKP(b=None) + ERK(b=None, T='u', Y='u'),
-                              kc_mkp)
 
-def mkp_dephos_erk_2_step_specific():
+    Rule('MEK_bind_ERK_uu', MEK(b=None) + ERK(b=None, T='u', Y='u') <>\
+                            MEK(b=1) % ERK(b=1, T='u', Y='u'), kf_mek, kr_mek)
+    Rule('MEK_bind_ERK_pY', MEK(b=None) + ERK(b=None, T='u', Y='p') <>\
+                            MEK(b=1) % ERK(b=1, T='u', Y='p'), kf_mek_y, kr_mek_p)
+    Rule('MEK_bind_ERK_pp', MEK(b=None) + ERK(b=None, T='p', Y='p') <>\
+                            MEK(b=1) % ERK(b=1, T='p', Y='p'), kf_mek, kr_mek_p)
+    Rule('MEK_phos_ERK_Y', MEK(b=1) % ERK(b=1, T='u', Y='u') >>\
+                            MEK(b=None) + ERK(b=None, T='u', Y='p'), kc_mek_y)
+    Rule('MEK_phos_ERK_TpY', MEK(b=1) % ERK(b=1, T='u', Y='p') >>\
+                            MEK(b=None) + ERK(b=None, T='p', Y='p'), kc_mek_yt)
+
+def mkp_dephos_erk_random():
     """The parameters are based on Table S2 of Markevich et al. 
-    But we assume distributive random phosphatasa mechanism.
-    
+    But we assume distributive random phosphatase mechanism.
+
     First and second order rate constants are in s^{-1} and nM^{-1}s^{-1}
     respectively.
     """
@@ -145,7 +88,7 @@ def mkp_dephos_erk_2_step_specific():
                                    #    in the reaction for the original h_8
     Parameter('kc_mkp_p', 9.2e-2)  # = h_2
     alias_model_components()
-    
+
     Rule('MKP_bind_ERK_uu', MKP(b=None) + ERK(b=None, T='u', Y='u') <>\
                             MKP(b=1) % ERK(b=1, T='u', Y='u'), kf_mkp, 
                             kr_mkp)
@@ -158,7 +101,121 @@ def mkp_dephos_erk_2_step_specific():
     Rule('MKP_bind_ERK_pp', MKP(b=None) + ERK(b=None, T='p', Y='p') <>\
                             MKP(b=1) % ERK(b=1, T='p', Y='p'), 
                             kf_mkp_pp, kr_mkp_pp)
-    
+
+    Rule('MKP_dephos_ERK_ppT', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
+                               MKP(b=None) + ERK(b=None, T='u', Y='p'),
+                               kc_mkp_p)
+    Rule('MKP_dephos_ERK_ppY', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
+                               MKP(b=None) + ERK(b=None, T='p', Y='u'),
+                               kc_mkp_p)
+    Rule('MKP_dephos_ERK_pT', MKP(b=1) % ERK(b=1, T='p', Y='u') >>\
+                              MKP(b=None) + ERK(b=None, T='u', Y='u'),
+                              kc_mkp)
+    Rule('MKP_dephos_ERK_pY', MKP(b=1) % ERK(b=1, T='u', Y='p') >>\
+                              MKP(b=None) + ERK(b=None, T='u', Y='u'),
+                              kc_mkp)
+
+def mkp_dephos_erk_seq():
+    """The parameters are based on Table S2 of Markevich et al. 
+    But we assume distributive sequential phosphatase mechanism.
+
+    First and second order rate constants are in s^{-1} and nM^{-1}s^{-1}
+    respectively.
+    """
+    Parameter('kf_mkp', 2.9e-3)    # = h_{-6} + h_{-9}
+    Parameter('kf_mkp_p', 1e-2)    # = h_{-3} + h_{7}
+    Parameter('kf_mkp_pp', 4.5e-2) # = h_1
+    Parameter('kr_mkp', 1.4e-1)    # = h_9 which is also used 
+                                   #    in the reaction for the original h_6
+    Parameter('kr_mkp_p', 1)       # = h_{3} = h_{-4} = h_{-7} = h_{12}
+    Parameter('kr_mkp_pp', 1)      # = h_{-1}
+    Parameter('kc_mkp', 5e-1)      # = h_5 which is also used
+                                   #    in the reaction for the original h_8
+    Parameter('kc_mkp_p', 9.2e-2)  # = h_2
+    alias_model_components()
+
+    Rule('MKP_bind_ERK_uu', MKP(b=None) + ERK(b=None, T='u', Y='u') <>\
+                            MKP(b=1) % ERK(b=1, T='u', Y='u'), kf_mkp, 
+                            kr_mkp)
+    Rule('MKP_bind_ERK_pY', MKP(b=None) + ERK(b=None, T='u', Y='p') <>\
+                            MKP(b=1) % ERK(b=1, T='u', Y='p'), kf_mkp_p,
+                            kr_mkp_p)
+    Rule('MKP_bind_ERK_pp', MKP(b=None) + ERK(b=None, T='p', Y='p') <>\
+                            MKP(b=1) % ERK(b=1, T='p', Y='p'), 
+                            kf_mkp_pp, kr_mkp_pp)
+
+    Rule('MKP_dephos_ERK_ppT', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
+                               MKP(b=None) + ERK(b=None, T='u', Y='p'),
+                               kc_mkp_p)
+    Rule('MKP_dephos_ERK_pY', MKP(b=1) % ERK(b=1, T='u', Y='p') >>\
+                              MKP(b=None) + ERK(b=None, T='u', Y='u'),
+                              kc_mkp)
+
+def mek_phos_erk_random_generic():
+    """Based on Table S4 of Markevich et al. Assuming distributive random 
+    kinase mechanism.
+
+    First and second order rate constants are in s^{-1} and nM^{-1}s^{-1}
+    respectively.
+    """
+    Parameter('kf_mek', 4e-2)     # = k_1 + k_5
+    Parameter('kr_mek', 1)        # = k_{-1} = k_{-3}
+    Parameter('kf_mek_p', 3.2e-2) # = k_3 = k_7
+    Parameter('kr_mek_p', 1)      # = k_{-5} = k_{-7}
+    Parameter('kc_mek', 1e-2)     # = k_2 = k_6
+    Parameter('kc_mek_p', 15)     # = k_4 = k_8
+    alias_model_components()
+
+    Rule('MEK_bind_ERK_uu', MEK(b=None) + ERK(b=None, T='u', Y='u') <>\
+                            MEK(b=1) % ERK(b=1, T='u', Y='u'), kf_mek, kr_mek)
+    Rule('MEK_bind_ERK_pT', MEK(b=None) + ERK(b=None, T='p', Y='u') <>\
+                            MEK(b=1) % ERK(b=1, T='p', Y='u'), kf_mek_p, kr_mek_p)
+    Rule('MEK_bind_ERK_pY', MEK(b=None) + ERK(b=None, T='u', Y='p') <>\
+                            MEK(b=1) % ERK(b=1, T='u', Y='p'), kf_mek_p, kr_mek_p)
+    Rule('MEK_bind_ERK_pp', MEK(b=None) + ERK(b=None, T='p', Y='p') <>\
+                            MEK(b=1) % ERK(b=1, T='p', Y='p'), kf_mek_p, kr_mek_p)
+    Rule('MEK_phos_ERK_T', MEK(b=1) % ERK(b=1, T='u', Y='u') >>\
+                            MEK(b=None) + ERK(b=None, T='p', Y='u'), kc_mek)
+    Rule('MEK_phos_ERK_Y', MEK(b=1) % ERK(b=1, T='u', Y='u') >>\
+                            MEK(b=None) + ERK(b=None, T='u', Y='p'), kc_mek)
+    Rule('MEK_phos_ERK_TpY', MEK(b=1) % ERK(b=1, T='u', Y='p') >>\
+                            MEK(b=None) + ERK(b=None, T='p', Y='p'), kc_mek_p)
+    Rule('MEK_phos_ERK_pTY', MEK(b=1) % ERK(b=1, T='p', Y='u') >>\
+                            MEK(b=None) + ERK(b=None, T='p', Y='p'), kc_mek_p)
+
+def mkp_dephos_erk_random_generic():
+    """Based on and simplified from Table S4 of Markevich et al. 
+    Assuming distributive random phosphatase mechanism. It is simplified to 
+    2-step mechanisms from the 3-step ones in the original table.
+
+    First and second order rate constants are in s^{-1} and nM^{-1}s^{-1}
+    respectively.
+    """
+    Parameter('kf_mkp', 2.9e-3)    # = h_{-6} + h_{-9}
+    Parameter('kf_mkp_p', 2e-2)    # = h_{-3} + h_4 = h_7 + h_{-12}
+    Parameter('kf_mkp_pp', 4.5e-2) # = h_1 = h_{10}
+    Parameter('kr_mkp', 1.4e-1)    # = h_9 which is also used 
+                                   #    in the reaction for the original h_6
+    Parameter('kr_mkp_p', 1)       # = h_{3} = h_{-4} = h_{-7} = h_{12}
+    Parameter('kr_mkp_pp', 1)      # = h_{-1} = h_{-10}
+    Parameter('kc_mkp', 5e-1)      # = h_5 which is also used
+                                   #    in the reaction for the original h_8
+    Parameter('kc_mkp_p', 9.2e-2)  # = h_2 = h_{11}
+    alias_model_components()
+
+    Rule('MKP_bind_ERK_uu', MKP(b=None) + ERK(b=None, T='u', Y='u') <>\
+                            MKP(b=1) % ERK(b=1, T='u', Y='u'), kf_mkp, 
+                            kr_mkp)
+    Rule('MKP_bind_ERK_pT', MKP(b=None) + ERK(b=None, T='p', Y='u') <>\
+                            MKP(b=1) % ERK(b=1, T='p', Y='u'), kf_mkp_p,
+                            kr_mkp_p)
+    Rule('MKP_bind_ERK_pY', MKP(b=None) + ERK(b=None, T='u', Y='p') <>\
+                            MKP(b=1) % ERK(b=1, T='u', Y='p'), kf_mkp_p,
+                            kr_mkp_p)
+    Rule('MKP_bind_ERK_pp', MKP(b=None) + ERK(b=None, T='p', Y='p') <>\
+                            MKP(b=1) % ERK(b=1, T='p', Y='p'), 
+                            kf_mkp_pp, kr_mkp_pp)
+
     Rule('MKP_dephos_ERK_ppT', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
                                MKP(b=None) + ERK(b=None, T='u', Y='p'),
                                kc_mkp_p)
@@ -191,16 +248,16 @@ def erk_dimerize_phos():
     Parameter('kr_erk', 1e-5)
     alias_model_components()
     # These 3 rules cover all the combinations for any phosphorylated form
-    # of ERK to dimerize. Only unphosphorylated for should not be able to
+    # of ERK to dimerize. Only unphosphorylated form should not be able to
     # dimerize.
-    Rule('ERK_bind_ERK', ERK(b=None, Y='p') + ERK(b=None, Y='p') 
-                         <> ERK(b=1, Y='p') % ERK(b=1, Y='p'), 
+    Rule('ERK_bind_ERK1', ERK(b=None, Y='p') + ERK(b=None, Y='p')
+                         <> ERK(b=1, Y='p') % ERK(b=1, Y='p'),
                          kf_erk, kr_erk)
-    Rule('ERK_bind_ERK', ERK(b=None, T='p', Y='u') + ERK(b=None, T='p', Y='u') 
-                         <> ERK(b=1, T='p', Y='u') % ERK(b=1, T='p', Y='u'), 
+    Rule('ERK_bind_ERK2', ERK(b=None, T='p', Y='u') + ERK(b=None, T='p', Y='u')
+                         <> ERK(b=1, T='p', Y='u') % ERK(b=1, T='p', Y='u'),
                          kf_erk, kr_erk)
-    Rule('ERK_bind_ERK', ERK(b=None, Y='p') + ERK(b=None, T='p', Y='u') 
-                         <> ERK(b=1, Y='p') % ERK(b=1, T='p', Y='u'), 
+    Rule('ERK_bind_ERK3', ERK(b=None, Y='p') + ERK(b=None, T='p', Y='u')
+                         <> ERK(b=1, Y='p') % ERK(b=1, T='p', Y='u'),
                          kf_erk, kr_erk)
 
 def erk_autophos():
@@ -217,7 +274,7 @@ def erk_activate_mkp():
     Parameter('kc_mkp_act', 1)
     Parameter('kc_mkp_deact', 1)
     alias_model_components()
-    
+
     Rule('ERK_release_act_MKP', MKP(b=1) % ERK(b=1, T='p', Y='p') >>\
                                 MKP_act(b=None) + ERK(b=None, T='p', Y='p'),
                                 kc_erk_act_mkp)
@@ -234,7 +291,7 @@ def erk_activate_mkp():
     Rule('MKP_act_bind_ERK_pp', MKP_act(b=None) + ERK(b=None, T='p', Y='p') <>\
                             MKP_act(b=1) % ERK(b=1, T='p', Y='p'), kf_mkp_pp, 
                             kr_mkp_pp)
-    
+
     Rule('MKP_act_dephos_ERK_ppT', MKP_act(b=1) % ERK(b=1, T='p', Y='p') >>\
                                 MKP_act(b=None) + ERK(b=None, T='u', Y='p'), 
                                 kc_mkp_act)
@@ -247,7 +304,7 @@ def erk_activate_mkp():
     Rule('MKP_act_dephos_ERK_pY', MKP_act(b=1) % ERK(b=1, T='u', Y='p') >>\
                                 MKP(b=None) + ERK(b=None, T='u', Y='u'), 
                                 kc_mkp_act)
-    
+
     Rule('MKP_deact', MKP_act(b=None) >> MKP(b=None), kc_mkp_deact)
     Observable('MKP_act_', MKP_act())
 
