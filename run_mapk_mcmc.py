@@ -1,17 +1,23 @@
 import sys
 import csv
 import numpy
-#import matplotlib.pyplot as plt
 import pickle
+import time
+import pandas
 
 import emcee
 from pysb.integrate import Solver
+from pysb.bng import generate_equations
 from pysb import *
 
 import mapk_model
+import build_mapk_models
 
-folder_path = '/home/ap397/erk_invitro'
-use_mpi = False
+# These need to be set for each machine
+input_path = './'
+pickle_path = './'
+scratch_path = './'
+use_mpi = True
 
 class MapkExperiment(object):
     def __init__(self):
@@ -44,6 +50,12 @@ class MapkExperiment(object):
         self.ERKpTpY_std = numpy.array([d if d > sigma_min else
                                         sigma_min for d in self.ERKpTpY_std])
 
+class Prior(object):
+    def __init__(self, vals, means, stds):
+        self.vals = vals
+        self.means = means
+        self.stds = stds
+
 def getfloat(s):
     if s == '':
         return numpy.nan
@@ -62,7 +74,7 @@ def read_data():
 
     data = []
 
-    with open(folder_path + '/combined_data_9.csv', 'r') as fh:
+    with open(input_path + 'combined_data_9.csv', 'r') as fh:
         lines = fh.readlines()
         blocksize = 1 + nt
         for i in range(nexp):
@@ -101,7 +113,26 @@ def read_data():
             data.append(exp)
     return data
 
-def sim_experiment(model, exp, pd=None):
+def read_prior(model):
+    fname = input_path + 'param_inits.tsv'
+    df = pandas.DataFrame.from_csv(fname, sep='\t', index_col=None)
+    pnames = [p.name for p in model.parameters if p.name.startswith('k')]
+    means = df.mean()
+    stds = df.std()
+    mean_dict = {}
+    std_dict = {}
+    num_sample = len(df)
+    vals = [{} for i in range(num_sample)]
+    print df
+    for pn in pnames:
+        mean_dict[pn] = means[pn]
+        std_dict[pn] = stds[pn]
+        for i in range(num_sample):
+            vals[i][pn] = df[pn][i]
+    prior_vals = Prior(vals, mean_dict, std_dict)
+    return prior_vals
+
+def sim_experiment(model, exp, pd=None, solver=None):
     if pd is None:
         pd = {}
     pd['ERK_0'] = exp.ERKtot * exp.ERK[0]
@@ -111,7 +142,11 @@ def sim_experiment(model, exp, pd=None):
     pd['MEK_0'] = exp.MEKtot
     pd['MKP_0'] = exp.MKPtot
 
-    solver = Solver(model, exp.ts, use_analytic_jacobian=True)
+    if solver is None:
+        Solver._use_inline = True
+        solver = Solver(model, exp.ts, use_analytic_jacobian=True)
+    else:
+        solver.set_tspan(exp.ts)
     solver.run(pd)
     return solver.yobs
 
@@ -170,10 +205,15 @@ def plot_best(model, data, sampler):
 def likelihood(p, model, data, plot=False):
     pd = parameter_dict(model, p)
     lh = 0
+    tstart = time.time()
+    Solver._use_inline = True
+    sol = Solver(model, data[0].ts, nsteps=1e5)
     for i, exp in enumerate(data):
+        # Experiment 1 is a control that is not relevant for
+        # model fitting.
         if i == 1:
             continue
-        yobs = sim_experiment(model, exp, pd)
+        yobs = sim_experiment(model, exp, pd, sol)
         erk = yobs['ERKu'] / exp.ERKtot
         erkpt = yobs['ERKpT'] / exp.ERKtot
         erkpy = yobs['ERKpY'] / exp.ERKtot
@@ -182,17 +222,19 @@ def likelihood(p, model, data, plot=False):
         lh += gauss_lh(erkpt[1:], exp.ERKpT[1:], exp.ERKpT_std[1:])
         lh += gauss_lh(erkpy[1:], exp.ERKpY[1:], exp.ERKpY_std[1:])
 
-    print lh
+    tend = time.time()
+    print lh, tend-tstart
+    sys.stdout.flush()
     if numpy.isnan(lh):
         return -numpy.inf
     else:
         return lh
 
-def prior(p, model):
+def prior(p, model, prior_vals):
     pd = parameter_dict(model, p)
     lp = 0
     for pn, pv in pd.iteritems():
-        lp += -(numpy.log10(pv) - numpy.log10(model.parameters[pn].value))**2 / 4.0
+        lp += -(numpy.log10(pv) - prior_vals.means[pn])**2 / (2*prior_vals.stds[pn]**2)
     print lp
     return lp
 
@@ -203,87 +245,45 @@ def posterior(p, model, data):
     print lpri, llh
     return lp
 
-def build_markevich_2step():
-    Model()
-    mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step_specific()
-    mapk_model.mkp_dephos_erk_2_step_specific()
-    mapk_model.mapk_initials()
-    mapk_model.mapk_observables()
-    return model
+def get_num_walkers(ndim, blocksize):
+    # Get at least 2*ndim+1 walkers such that the total number of
+    # walkers is a multiple of blocksize
+    nblocks = int(numpy.ceil((2*ndim+1)/(1.0*blocksize)))
+    nwalkers = blocksize * nblocks
+    return nwalkers
 
-def build_erk_autophos_any():
-    Model()
-    mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step_specific()
-    mapk_model.mkp_dephos_erk_2_step_specific()
-    mapk_model.erk_dimerize_any()
-    mapk_model.erk_autophos()
-    mapk_model.mapk_initials()
-    mapk_model.mapk_observables()
-    return model
+def run_one_model(model, data, prior_vals, ns, pool=None):
+    # Vector of estimated parameters
+    pe = [p for p in model.parameters if p.name.startswith('k')]
 
-def build_erk_autophos_uT():
-    Model()
-    mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step_specific()
-    mapk_model.mkp_dephos_erk_2_step_specific()
-    mapk_model.erk_dimerize_uT()
-    mapk_model.erk_autophos()
-    mapk_model.mapk_initials()
-    mapk_model.mapk_observables()
-    return model
-
-def build_erk_autophos_phos():
-    Model()
-    mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step_specific()
-    mapk_model.mkp_dephos_erk_2_step_specific()
-    mapk_model.erk_dimerize_uT()
-    mapk_model.erk_autophos()
-    mapk_model.mapk_initials()
-    mapk_model.mapk_observables()
-    return model
-
-def build_erk_activate_mkp():
-    Model()
-    mapk_model.mapk_monomers()
-    mapk_model.mek_phos_erk_2_step_specific()
-    mapk_model.mkp_dephos_erk_2_step_specific()
-    mapk_model.erk_dimerize_uT()
-    mapk_model.erk_autophos()
-    mapk_model.erk_activate_mkp()
-    mapk_model.mapk_initials()
-    mapk_model.mapk_observables()
-    return model 
-
-def run_one_model(model, model_number, data, ns, pool=None):
-    # Vector of nominal parameters
-    p = numpy.log10(numpy.array([pp.value for pp in model.parameters
-                                 if pp.name[0]=='k']))
-    print posterior(p, model, data)
+    # Generate model equations
+    generate_equations(model)
+    Solver._use_inline = True
+    sol = Solver(model, numpy.linspace(0,10,10))
+    sol.run()
 
     # Number of temperatures, dimensions and walkers
     ntemps = 20
-    ndim = len(p)
-    blocksize = 4
-    nblocks = int(numpy.ceil((2*ndim+1)/(1.0*blocksize)))
-    nwalkers = blocksize * nblocks
+    ndim = len(pe)
+    blocksize = 48
+    nwalkers = get_num_walkers(ndim, blocksize)
     print 'Running %d walkers at %d temperatures for %d steps.' %\
           (nwalkers, ntemps, ns)
 
     sampler = emcee.PTSampler(ntemps, nwalkers, ndim, likelihood, prior,
          threads=1, pool=pool, betas=None, a=2.0, Tmax=None,
-         loglargs=[model, data], logpargs=[model],
+         loglargs=[model, data], logpargs=[model, prior_vals],
          loglkwargs={}, logpkwargs={})
 
     # Random initial parameters for walkers
     p0 = numpy.ones((ntemps, nwalkers, ndim))
     for i in range(ntemps):
         for j in range(nwalkers):
-            p0[i, j, :] = p + 1.0*(numpy.random.rand(ndim)-0.5)
+            for k, pp in enumerate(pe):
+                p0[i, j, k] = prior_vals.vals[j][pp.name]
+    print p0
     # Run sampler
-    fname = folder_path + 'chain_%d.dat' % model_number
+    fname = scratch_path + 'chain_%s.dat' % model.name
     step = 0
     for result in sampler.sample(p0, iterations=ns, storechain=True):
         print '---'
@@ -296,6 +296,66 @@ def run_one_model(model, model_number, data, ns, pool=None):
         step += 1
     return sampler
 
+def build_markevich_2step():
+    Model()
+    mapk_model.mapk_monomers()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
+    mapk_model.mapk_initials()
+    mapk_model.mapk_observables()
+    model.name = 'markevich_2step'
+    return model
+
+def build_erk_autophos_any():
+    Model()
+    mapk_model.mapk_monomers()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
+    mapk_model.erk_dimerize_any()
+    mapk_model.erk_autophos()
+    mapk_model.mapk_initials()
+    mapk_model.mapk_observables()
+    model.name = 'erk_autophos_any'
+    return model
+
+def build_erk_autophos_uT():
+    Model()
+    mapk_model.mapk_monomers()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
+    mapk_model.erk_dimerize_uT()
+    mapk_model.erk_autophos()
+    mapk_model.mapk_initials()
+    mapk_model.mapk_observables()
+    model.name = 'erk_autophos_uT'
+    return model
+
+def build_erk_autophos_phos():
+    Model()
+    mapk_model.mapk_monomers()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
+    mapk_model.erk_dimerize_uT()
+    mapk_model.erk_autophos()
+    mapk_model.mapk_initials()
+    mapk_model.mapk_observables()
+    model.name = 'erk_autophos_phos'
+    return model
+
+def build_erk_activate_mkp():
+    Model()
+    mapk_model.mapk_monomers()
+    mapk_model.mek_phos_erk_2_step_specific()
+    mapk_model.mkp_dephos_erk_2_step_specific()
+    mapk_model.erk_dimerize_uT()
+    mapk_model.erk_autophos()
+    mapk_model.erk_activate_mkp()
+    mapk_model.mapk_initials()
+    mapk_model.mapk_observables()
+    model.name = 'erk_activate_mkp'
+    return model
+
+
 if __name__ == '__main__':
     if use_mpi:
         pool = emcee.mpi_pool.MPIPool()
@@ -306,34 +366,32 @@ if __name__ == '__main__':
         pool = None
 
     if len(sys.argv) > 1:
-        model_number = int(sys.argv[1])
+        model_name = sys.argv[1]
     else:
-        print 'Using default model'
-        model_number = 1
+        print 'No model name given'
+        sys.exit(1)
     if len(sys.argv) > 2:
         ns = int(sys.argv[2])
     else:
         print 'Using default step number'
         ns = 100
 
-    print 'Running model %d for %d steps' % (model_number, ns)
-
+    print 'Running model %s for %d steps' % (model_name, ns)
     # Read experimental data
     print 'Reading data...'
     data = read_data()
     # Build model of interest
     print 'Building model...'
-    if model_number == 1:
-        model = build_markevich_2step()
-    elif model_number == 2:
-        model = build_erk_autophos_phos()
-    elif model_number == 3:
-        model = build_erk_autophos_uT()
-    elif model_number == 4:
-        model = build_erk_activate_mkp()
+    models = build_mapk_models.build_all_models()
+    model = models.get(model_name)
+    if model is None:
+        print 'Could not find model %s' % model_name
+        sys.exit(1)
+
+    prior_vals = read_prior(model)
 
     print 'Starting sampler...'
-    sampler = run_one_model(model, model_number, data, ns, pool)
+    sampler = run_one_model(model, data, prior_vals, ns, pool)
 
     if use_mpi:
         pool.close()
@@ -344,5 +402,5 @@ if __name__ == '__main__':
     sampler.logl = None
     sampler.logp = None
     print 'Saving results...'
-    with open(folder_path + 'model_%d.pkl' % model_number, 'wb') as fh:
+    with open(pickle_path + '%s.pkl' % model_name, 'wb') as fh:
         pickle.dump(sampler, fh)
